@@ -26,7 +26,7 @@ type sysUserDao struct {
 var (
 	// SysUser is globally public accessible object for table sys_user operations.
 	SysUser = sysUserDao{
-		internal.NewSysUserDao(),
+		internal.NewSysUserDao("default"),
 	}
 )
 

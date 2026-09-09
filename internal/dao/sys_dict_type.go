@@ -20,7 +20,7 @@ type sysDictTypeDao struct {
 var (
 	// SysDictType is globally public accessible object for table sys_dict_type operations.
 	SysDictType = sysDictTypeDao{
-		internal.NewSysDictTypeDao(),
+		internal.NewSysDictTypeDao("default"),
 	}
 )
 

@@ -23,7 +23,7 @@ type sysDeptDao struct {
 var (
 	// SysDept is globally public accessible object for table sys_dept operations.
 	SysDept = sysDeptDao{
-		internal.NewSysDeptDao(),
+		internal.NewSysDeptDao("default"),
 	}
 )
 

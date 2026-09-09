@@ -45,9 +45,12 @@ var sysRoleColumns = SysRoleColumns{
 }
 
 // NewSysRoleDao creates and returns a new DAO object for table data access.
-func NewSysRoleDao() *SysRoleDao {
+func NewSysRoleDao(group string) *SysRoleDao {
+	if group == "" {
+		group = "default"
+	}
 	return &SysRoleDao{
-		group:   "default",
+		group:   group,
 		table:   "sys_role",
 		columns: sysRoleColumns,
 	}

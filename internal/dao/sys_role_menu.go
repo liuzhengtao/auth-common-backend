@@ -23,7 +23,7 @@ type sysRoleMenuDao struct {
 var (
 	// SysRoleMenu is globally public accessible object for table sys_role_menu operations.
 	SysRoleMenu = sysRoleMenuDao{
-		internal.NewSysRoleMenuDao(),
+		internal.NewSysRoleMenuDao("default"),
 	}
 )
 

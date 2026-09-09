@@ -26,7 +26,7 @@ type sysMenuDao struct {
 var (
 	// SysMenu is globally public accessible object for table sys_menu operations.
 	SysMenu = sysMenuDao{
-		internal.NewSysMenuDao(),
+		internal.NewSysMenuDao("default"),
 	}
 )
 

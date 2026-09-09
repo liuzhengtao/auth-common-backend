@@ -20,7 +20,7 @@ type sysUserRoleDao struct {
 var (
 	// SysUserRole is globally public accessible object for table sys_user_role operations.
 	SysUserRole = sysUserRoleDao{
-		internal.NewSysUserRoleDao(),
+		internal.NewSysUserRoleDao("default"),
 	}
 )
 

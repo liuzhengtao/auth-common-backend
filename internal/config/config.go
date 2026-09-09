@@ -15,6 +15,7 @@ type Config struct {
 	JwtAesKey   string `json:"jwtAesKey"`
 	EncryptSalt string `json:"encryptSalt"`
 	RoutePrefix string `json:"routePrefix"`
+	DbGroup     string `json:"dbGroup"`
 }
 
 var (
@@ -29,6 +30,7 @@ func defaultConfig() Config {
 		JwtAesKey:   consts.JwtAesKey,
 		EncryptSalt: consts.EncryptSaltKey,
 		RoutePrefix: "/api/v1",
+		DbGroup:     "default",
 	}
 }
 
@@ -57,6 +59,9 @@ func Load(ctx context.Context) Config {
 		}
 		if cfg.RoutePrefix == "" {
 			cfg.RoutePrefix = "/api/v1"
+		}
+		if cfg.DbGroup == "" {
+			cfg.DbGroup = "default"
 		}
 	}
 	loaded = true
@@ -87,4 +92,18 @@ func SetRoutePrefix(prefix string) {
 		loaded = true
 	}
 	cfg.RoutePrefix = prefix
+}
+
+// SetDBGroup 由 Install Option 覆盖数据库配置组名。
+func SetDBGroup(group string) {
+	if group == "" {
+		return
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	if !loaded {
+		cfg = defaultConfig()
+		loaded = true
+	}
+	cfg.DbGroup = group
 }

@@ -11,6 +11,7 @@ import (
 	"github.com/gogf/gf/v2/os/gctx"
 	"github.com/gogf/gf/v2/util/gconv"
 
+	"github.com/liuzhengtao/auth-common-backend/internal/config"
 	"github.com/liuzhengtao/auth-common-backend/internal/consts"
 	"github.com/liuzhengtao/auth-common-backend/internal/dao"
 	"github.com/liuzhengtao/auth-common-backend/internal/model/do"
@@ -36,9 +37,9 @@ func ensureSchema(ctx context.Context) error {
 	if ctx == nil {
 		ctx = gctx.New()
 	}
-	db := g.DB()
+	db := g.DB(config.Get().DbGroup)
 	if db == nil {
-		return gerror.New("auth-common: database not configured (g.DB() is nil)")
+		return gerror.Newf("auth-common: database not configured (g.DB(%s) is nil)", config.Get().DbGroup)
 	}
 	if _, err := db.GetValue(ctx, "SELECT 1"); err != nil {
 		return gerror.Wrap(err, "auth-common: cannot connect to database")
@@ -67,7 +68,7 @@ func ensureSchema(ctx context.Context) error {
 
 func tableSet(ctx context.Context) (map[string]bool, error) {
 	set := make(map[string]bool, len(requiredTables))
-	tables, err := g.DB().Tables(ctx)
+	tables, err := g.DB(config.Get().DbGroup).Tables(ctx)
 	if err != nil {
 		return nil, gerror.Wrap(err, "auth-common: list tables failed")
 	}
@@ -80,7 +81,7 @@ func tableSet(ctx context.Context) (map[string]bool, error) {
 func execSchemaSQL(ctx context.Context) error {
 	stmts := splitSQLStatements(string(schemaSQL))
 	for _, stmt := range stmts {
-		if _, err := g.DB().Exec(ctx, stmt); err != nil {
+		if _, err := g.DB(config.Get().DbGroup).Exec(ctx, stmt); err != nil {
 			return gerror.Wrapf(err, "auth-common: exec schema failed: %s", truncate(stmt, 80))
 		}
 	}
@@ -128,7 +129,7 @@ func seedIfNeeded(ctx context.Context) error {
 	g.Log().Info(ctx, "auth-common: initializing default seed data")
 	passwd := gconv.String(utility.EncryptData(consts.DEFAULT_PASSWORD))
 
-	return g.DB().Transaction(ctx, func(ctx context.Context, tx gdb.TX) error {
+	return g.DB(config.Get().DbGroup).Transaction(ctx, func(ctx context.Context, tx gdb.TX) error {
 		return seedData(ctx, tx, passwd)
 	})
 }

@@ -49,9 +49,12 @@ var sysDeptColumns = SysDeptColumns{
 }
 
 // NewSysDeptDao creates and returns a new DAO object for table data access.
-func NewSysDeptDao() *SysDeptDao {
+func NewSysDeptDao(group string) *SysDeptDao {
+	if group == "" {
+		group = "default"
+	}
 	return &SysDeptDao{
-		group:   "default",
+		group:   group,
 		table:   "sys_dept",
 		columns: sysDeptColumns,
 	}

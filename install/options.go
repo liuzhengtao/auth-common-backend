@@ -5,6 +5,7 @@ type Option func(*options)
 
 type options struct {
 	prefix         string
+	dbGroup        string
 	skipSchemaInit bool
 }
 
@@ -16,6 +17,13 @@ func defaultOptions() *options {
 func WithPrefix(prefix string) Option {
 	return func(o *options) {
 		o.prefix = prefix
+	}
+}
+
+// WithDBGroup 覆盖数据库配置组名，默认 default（也可通过 config authCommon.dbGroup 配置）。
+func WithDBGroup(group string) Option {
+	return func(o *options) {
+		o.dbGroup = group
 	}
 }
 

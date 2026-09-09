@@ -11,6 +11,7 @@ import (
 
 	"github.com/liuzhengtao/auth-common-backend/internal/config"
 	"github.com/liuzhengtao/auth-common-backend/internal/controller"
+	"github.com/liuzhengtao/auth-common-backend/internal/dao"
 	"github.com/liuzhengtao/auth-common-backend/middleware"
 )
 
@@ -58,8 +59,12 @@ func Install(server *ghttp.Server, opts ...Option) error {
 	cfg := config.Load(ctx)
 	if o.prefix != "" {
 		config.SetRoutePrefix(o.prefix)
-		cfg = config.Get()
 	}
+	if o.dbGroup != "" {
+		config.SetDBGroup(o.dbGroup)
+	}
+	cfg = config.Get()
+	dao.Init(cfg.DbGroup)
 
 	if !o.skipSchemaInit {
 		if err := ensureSchema(ctx); err != nil {
@@ -111,6 +116,7 @@ func MustInstall(server *ghttp.Server, opts ...Option) {
 
 // EnsureSchema 仅执行检表/建表/种子，不注册路由（便于单独初始化）。
 func EnsureSchema(ctx context.Context) error {
-	config.Load(ctx)
+	cfg := config.Load(ctx)
+	dao.Init(cfg.DbGroup)
 	return ensureSchema(ctx)
 }

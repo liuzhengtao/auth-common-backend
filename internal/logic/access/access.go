@@ -8,6 +8,7 @@ import (
 	"github.com/gogf/gf/v2/os/gctx"
 	"github.com/gogf/gf/v2/util/gconv"
 
+	"github.com/liuzhengtao/auth-common-backend/internal/config"
 	"github.com/liuzhengtao/auth-common-backend/internal/model/entity"
 )
 
@@ -18,10 +19,10 @@ type sAccess struct {
 func New() *sAccess {
 	accessS := sAccess{}
 	ctx := gctx.New()
-	config, _ := g.Cfg().Get(ctx, "casbin")
+	cfgVal, _ := g.Cfg().Get(ctx, "casbin")
 	var options *casbin.Options
-	db := g.DB()
-	confErr := gconv.Scan(config, &options)
+	db := g.DB(config.Get().DbGroup)
+	confErr := gconv.Scan(cfgVal, &options)
 	if confErr != nil {
 		panic(confErr)
 	}

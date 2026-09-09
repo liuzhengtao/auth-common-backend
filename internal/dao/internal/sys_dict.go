@@ -47,9 +47,12 @@ var sysDictColumns = SysDictColumns{
 }
 
 // NewSysDictDao creates and returns a new DAO object for table data access.
-func NewSysDictDao() *SysDictDao {
+func NewSysDictDao(group string) *SysDictDao {
+	if group == "" {
+		group = "default"
+	}
 	return &SysDictDao{
-		group:   "default",
+		group:   group,
 		table:   "sys_dict",
 		columns: sysDictColumns,
 	}

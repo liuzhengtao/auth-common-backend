@@ -8,7 +8,7 @@ GoFrame v2 鉴权 / 系统管理插件。其它 GoFrame 项目通过 `go get` �
 go get github.com/liuzhengtao/auth-common-backend
 ```
 
-宿主需已配置 MySQL（GoFrame `database.default`），并 blank-import MySQL 驱动：
+宿主需已配置 MySQL（GoFrame `database` 下对应 group，默认 `database.default`），并 blank-import MySQL 驱动：
 
 ```go
 package main
@@ -42,7 +42,7 @@ func main() {
 
 ### Install 行为
 
-1. 连接宿主默认库 `g.DB()`
+1. 连接宿主库 `g.DB(dbGroup)`（默认 group 为 `default`）
 2. 检查 8 张表：`sys_user` / `sys_role` / `sys_menu` / `sys_dept` / `sys_dict` / `sys_dict_type` / `sys_user_role` / `sys_role_menu`
 3. 缺失则自动 `CREATE TABLE`
 4. 若无 `admin` 用户，写入默认部门、角色、用户、菜单、字典
@@ -53,7 +53,8 @@ func main() {
 ```go
 install.Install(s,
     install.WithPrefix("/api/v1"),
-    install.WithSkipSchemaInit(true), // 宿主自行管库时跳过建表
+    install.WithDBGroup("auth"),        // 使用 database.auth 配置组
+    install.WithSkipSchemaInit(true),   // 宿主自行管库时跳过建表
 )
 ```
 
@@ -64,11 +65,18 @@ install.Install(s,
 宿主 `config.yaml`：
 
 ```yaml
+database:
+  default:
+    link: "mysql:user:pass@tcp(127.0.0.1:3306)/biz"
+  auth:
+    link: "mysql:user:pass@tcp(127.0.0.1:3306)/auth"
+
 authCommon:
   jwtSecret: "change-me"
   jwtAesKey: "change-me"
   encryptSalt: "change-me"
   routePrefix: "/api/v1"
+  dbGroup: "auth"   # 可选，默认 default；也可由 install.WithDBGroup 覆盖
 ```
 
 未配置时使用模块内默认值。种子用户密码按当前 `encryptSalt` **运行时计算**。

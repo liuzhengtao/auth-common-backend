@@ -53,9 +53,12 @@ var sysUserColumns = SysUserColumns{
 }
 
 // NewSysUserDao creates and returns a new DAO object for table data access.
-func NewSysUserDao() *SysUserDao {
+func NewSysUserDao(group string) *SysUserDao {
+	if group == "" {
+		group = "default"
+	}
 	return &SysUserDao{
-		group:   "default",
+		group:   group,
 		table:   "sys_user",
 		columns: sysUserColumns,
 	}

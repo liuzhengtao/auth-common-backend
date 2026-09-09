@@ -59,9 +59,12 @@ var sysMenuColumns = SysMenuColumns{
 }
 
 // NewSysMenuDao creates and returns a new DAO object for table data access.
-func NewSysMenuDao() *SysMenuDao {
+func NewSysMenuDao(group string) *SysMenuDao {
+	if group == "" {
+		group = "default"
+	}
 	return &SysMenuDao{
-		group:   "default",
+		group:   group,
 		table:   "sys_menu",
 		columns: sysMenuColumns,
 	}
