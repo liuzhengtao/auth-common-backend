@@ -12,13 +12,11 @@ import (
 	"github.com/gogf/gf/v2/net/ghttp"
 	"github.com/gogf/gf/v2/os/glog"
 	"github.com/gogf/gf/v2/util/gconv"
-
-	lib "gitee.com/zhengtao313/lib/utility"
-
 	"github.com/liuzhengtao/auth-common-backend/internal/config"
 	"github.com/liuzhengtao/auth-common-backend/internal/model"
 	"github.com/liuzhengtao/auth-common-backend/internal/model/entity"
 	"github.com/liuzhengtao/auth-common-backend/internal/service"
+	lib "github.com/liuzhengtao/commonlib/utility"
 )
 
 type sAuth struct {

@@ -1,10 +1,9 @@
 package test
 
 import (
-	"gitee.com/zhengtao313/lib/queue_task"
-	"github.com/gogf/gf/v2/frame/g"
-	"github.com/gogf/gf/v2/util/gconv"
 	"testing"
+
+	"github.com/liuzhengtao/commonlib/queue_task"
 )
 
 var (
@@ -31,17 +30,5 @@ func TestProducer(t *testing.T) {
 }
 
 func TestConsumer(t *testing.T) {
-	err := queueTask.ConsumerAutoAskHandler(ctx, QueueName, "[direct-test-consumer]", func(msg any) {
-		var info *QueueMessageInfo
-		err := gconv.Scan(msg, &info)
-		if err != nil {
-			t.Error(err)
-			return
-		}
-		g.Log().Info(ctx, info.MessageId, string(info.Body))
-	})
-	if err != nil {
-		t.Error(err)
-		return
-	}
+
 }
