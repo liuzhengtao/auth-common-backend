@@ -1,0 +1,269 @@
+package consts
+
+import (
+	"context"
+	"github.com/gogf/gf/v2/container/garray"
+	"github.com/gogf/gf/v2/container/gmap"
+	"github.com/gogf/gf/v2/frame/g"
+	"github.com/gogf/gf/v2/util/gconv"
+	"github.com/rabbitmq/amqp091-go"
+	"time"
+)
+
+var (
+	ExchangeName       = "direct-selling-admin"
+	QueueName          = "direct-selling-queue"
+	consumerMessageTip = "监听[直销队列]消费"
+)
+
+type QueueMessageInfo struct {
+	MessageId string
+	Body      []byte
+}
+
+func Consumer(ctx context.Context) {
+	instance := mq.MQ()
+	err := instance.ExchangeDeclare(ExchangeName, "direct")
+	if err != nil {
+		g.Log().Error(ctx, err)
+		return
+	}
+	err = instance.DeclareQueue(QueueName)
+	if err != nil {
+		g.Log().Error(ctx, err)
+		return
+	}
+	err = instance.QueueBind(QueueName, QueueName, ExchangeName)
+	if err != nil {
+		g.Log().Error(ctx, err)
+		return
+	}
+	containerMap := gmap.NewStrAnyMap(true)
+	counter := Counter{}
+	err = instance.ConsumeMessages(ctx, QueueName, consumerMessageTip, func(cbd *mq.CallBackDelivery) {
+		g.Log().Info(ctx, counter.Value(), string(cbd.Body))
+		if counter.Value() == 0 {
+			count, err := instance.GetMessgeReadyCount(ctx, QueueName, "15672")
+			if err != nil {
+				g.Log().Error(ctx, err)
+				return
+			}
+			if count >= 10 {
+				var queueMessageInfo *QueueMessageInfo
+				err := gconv.Scan(string(cbd.Body), &queueMessageInfo)
+				if err != nil {
+					return
+				}
+				if containerMap.Contains(queueMessageInfo.MessageId) {
+					arr := containerMap.Get(queueMessageInfo.MessageId).(*garray.Array)
+					arr.Append(queueMessageInfo)
+					containerMap.Set(queueMessageInfo.MessageId, arr)
+				} else {
+					arr := garray.New(true)
+					arr.Append(queueMessageInfo)
+					containerMap.Set(queueMessageInfo.MessageId, arr)
+				}
+				counter.Inc()
+				err = cbd.Ack(false)
+				if err != nil {
+					g.Log().Error(ctx, counter.Value(), err)
+					return
+				}
+			} else {
+				time.Sleep(time.Second * 3)
+			}
+		} else {
+			var queueMessageInfo *QueueMessageInfo
+			err := gconv.Scan(string(cbd.Body), &queueMessageInfo)
+			if err != nil {
+				return
+			}
+			if containerMap.Contains(queueMessageInfo.MessageId) {
+				arr := containerMap.Get(queueMessageInfo.MessageId).(*garray.Array)
+				arr.Append(queueMessageInfo)
+				containerMap.Set(queueMessageInfo.MessageId, arr)
+			} else {
+				arr := garray.New(true)
+				arr.Append(queueMessageInfo)
+				containerMap.Set(queueMessageInfo.MessageId, arr)
+			}
+			counter.Inc()
+			err = cbd.Ack(false)
+			if err != nil {
+				g.Log().Error(ctx, counter.Value(), err)
+				return
+			}
+			if counter.Value() >= 10 {
+				containerMap.Iterator(func(k string, v interface{}) bool {
+					g.Log().Info(ctx, k, v)
+					return true
+				})
+				containerMap.Clear()
+				counter.Set(0)
+			}
+		}
+	})
+	if err != nil {
+		g.Log().Error(ctx, err)
+		return
+	}
+}
+
+func ConsumerOther(ctx context.Context) {
+	m := mq.MQ()
+	containerMap := gmap.NewStrAnyMap(true)
+	counter := Counter{}
+	for {
+		msgChan, err := m.GetConsumerMessage(ctx, QueueName, "test")
+		if err != nil {
+			g.Log().Error(ctx, err)
+			return
+		}
+		for msg := range msgChan {
+			if counter.value == 0 {
+				count, err := m.GetMessgeReadyCount(ctx, QueueName, "15672")
+				if err != nil {
+					g.Log().Error(ctx, err)
+					return
+				}
+				if count >= 10 {
+					g.Log().Info(ctx, "counter.value=0")
+					var queueMessageInfo *QueueMessageInfo
+					err := gconv.Scan(string(msg.Body), &queueMessageInfo)
+					if err != nil {
+						g.Log().Error(ctx, err)
+						return
+					}
+					if containerMap.Contains(queueMessageInfo.MessageId) {
+						arr := containerMap.Get(queueMessageInfo.MessageId).(*garray.Array)
+						arr.Append(queueMessageInfo)
+						containerMap.Set(queueMessageInfo.MessageId, arr)
+					} else {
+						arr := garray.New(true)
+						arr.Append(queueMessageInfo)
+						containerMap.Set(queueMessageInfo.MessageId, arr)
+					}
+					counter.Inc()
+					err = msg.Ack(false)
+					if err != nil {
+						g.Log().Error(ctx, counter.Value(), err)
+						return
+					}
+				} else {
+					g.Log().Info(ctx, "sleep")
+					//err := msg.Reject(false)
+					//if err != nil {
+					//	g.Log().Info(ctx, err)
+					//	return
+					//}
+					time.Sleep(time.Second * 3)
+				}
+			} else {
+				g.Log().Info(ctx, "counter.value>0")
+				var queueMessageInfo *QueueMessageInfo
+				err := gconv.Scan(string(msg.Body), &queueMessageInfo)
+				if err != nil {
+					g.Log().Error(ctx, err)
+					return
+				}
+				if containerMap.Contains(queueMessageInfo.MessageId) {
+					arr := containerMap.Get(queueMessageInfo.MessageId).(*garray.Array)
+					arr.Append(queueMessageInfo)
+					containerMap.Set(queueMessageInfo.MessageId, arr)
+				} else {
+					arr := garray.New(true)
+					arr.Append(queueMessageInfo)
+					containerMap.Set(queueMessageInfo.MessageId, arr)
+				}
+				counter.Inc()
+				err = msg.Ack(false)
+				if err != nil {
+					g.Log().Error(ctx, counter.Value(), err)
+					return
+				}
+				if counter.Value() >= 10 {
+					containerMap.Iterator(func(k string, v interface{}) bool {
+						g.Log().Info(ctx, k, v)
+						return true
+					})
+					containerMap.Clear()
+					counter.Set(0)
+				}
+			}
+
+		}
+	}
+}
+
+func DoWork(ctx context.Context, counter *Counter, consumeThreshold int, msgChan <-chan amqp091.Delivery, containerMap *gmap.StrAnyMap) {
+	for counter.value < consumeThreshold {
+		select {
+		case d, ok := <-msgChan:
+			g.Log().Info(ctx, "msgchan", gconv.String(d.Body))
+			if !ok {
+				g.Log().Error(ctx, "channel closed")
+				return
+			}
+			var queueMessageInfo *QueueMessageInfo
+			err := gconv.Scan(string(d.Body), &queueMessageInfo)
+			if err != nil {
+				g.Log().Error(ctx, err)
+				return
+			}
+			if containerMap.Contains(queueMessageInfo.MessageId) {
+				arr := containerMap.Get(queueMessageInfo.MessageId).(*garray.Array)
+				arr.Append(queueMessageInfo)
+				containerMap.Set(queueMessageInfo.MessageId, arr)
+			} else {
+				arr := garray.New(true)
+				arr.Append(queueMessageInfo)
+				containerMap.Set(queueMessageInfo.MessageId, arr)
+			}
+			_ = d.Ack(false)
+			counter.Inc()
+		}
+	}
+	containerMap.Iterator(func(k string, v interface{}) bool {
+		g.Log().Info(ctx, k, v, v.(*garray.Array).Len())
+		return true
+	})
+	containerMap.Clear()
+	counter.Set(0)
+}
+
+func ConsumerNew(ctx context.Context) {
+	m := mq.MQ()
+	containerMap := gmap.NewStrAnyMap(true)
+	counter := Counter{}
+	consumeThreshold := 10
+	lastValue := 0
+	messageCounter := Counter{}
+	msgChan, err := m.GetConsumerMessage(ctx, QueueName, "test")
+	if err != nil {
+		g.Log().Error(ctx, err)
+		return
+	}
+	for {
+		msgCount, err := m.GetMessgeReadyCount(ctx, QueueName, "15672")
+		if err != nil {
+			g.Log().Error(ctx, err)
+			time.Sleep(5 * time.Second)
+			continue
+		}
+		if msgCount >= consumeThreshold {
+			DoWork(ctx, &counter, consumeThreshold, msgChan, containerMap)
+		} else {
+			time.Sleep(5 * time.Second)
+			if msgCount == lastValue && msgCount > 0 {
+				messageCounter.Inc()
+			} else {
+				messageCounter.Set(1)
+			}
+			lastValue = msgCount
+			if messageCounter.Value() >= 4 { //
+				DoWork(ctx, &counter, consumeThreshold, msgChan, containerMap)
+			}
+		}
+
+	}
+}
