@@ -89,24 +89,57 @@ func execSchemaSQL(ctx context.Context) error {
 }
 
 func splitSQLStatements(sql string) []string {
-	parts := strings.Split(sql, ";")
-	out := make([]string, 0, len(parts))
-	for _, p := range parts {
-		lines := strings.Split(p, "\n")
-		var kept []string
-		for _, line := range lines {
-			trim := strings.TrimSpace(line)
-			if trim == "" || strings.HasPrefix(trim, "--") {
-				continue
+	var (
+		out     []string
+		buf     strings.Builder
+		inQuote bool
+	)
+	for i := 0; i < len(sql); i++ {
+		c := sql[i]
+		if inQuote {
+			buf.WriteByte(c)
+			if c == '\'' {
+				// SQL escaped quote: ''
+				if i+1 < len(sql) && sql[i+1] == '\'' {
+					buf.WriteByte(sql[i+1])
+					i++
+					continue
+				}
+				inQuote = false
 			}
-			kept = append(kept, line)
+			continue
 		}
-		s := strings.TrimSpace(strings.Join(kept, "\n"))
-		if s != "" {
-			out = append(out, s)
+		switch c {
+		case '\'':
+			inQuote = true
+			buf.WriteByte(c)
+		case ';':
+			if s := trimSQLStatement(buf.String()); s != "" {
+				out = append(out, s)
+			}
+			buf.Reset()
+		default:
+			buf.WriteByte(c)
 		}
 	}
+	if s := trimSQLStatement(buf.String()); s != "" {
+		out = append(out, s)
+	}
 	return out
+}
+
+// trimSQLStatement drops blank / -- comment lines and trims the statement.
+func trimSQLStatement(p string) string {
+	lines := strings.Split(p, "\n")
+	var kept []string
+	for _, line := range lines {
+		trim := strings.TrimSpace(line)
+		if trim == "" || strings.HasPrefix(trim, "--") {
+			continue
+		}
+		kept = append(kept, line)
+	}
+	return strings.TrimSpace(strings.Join(kept, "\n"))
 }
 
 func truncate(s string, n int) string {
