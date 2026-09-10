@@ -9,7 +9,6 @@ import (
 	"github.com/gogf/gf/v2/os/glog"
 	"github.com/gogf/gf/v2/text/gstr"
 	"github.com/gogf/gf/v2/util/gconv"
-
 	"github.com/liuzhengtao/auth-common-backend/api/v1/dept"
 	"github.com/liuzhengtao/auth-common-backend/api/v1/menus"
 	"github.com/liuzhengtao/auth-common-backend/internal/consts"

@@ -52,9 +52,60 @@ func (d *sysMenuDao) ListRolePerms(ctx context.Context, roles []string) (perms [
 }
 
 func (d *sysMenuDao) ListRoutes(ctx context.Context) (menuList []*model.RouteBO, err error) {
-	err = d.Ctx(ctx).As("t1").LeftJoin("sys_role_menu t2", "t1.id=t2.menu_id").LeftJoin("sys_role t3", "t3.id = t2.role_id").Fields("t1.id,t1.name,t1.parent_id as parentId,t1.path,t1.component,t1.icon,t1.sort,t1.visible,t1.redirect,t1.type,t3.code as roles,t1.always_show as alwaysShow,t1.keep_alive as keepAlive").Where("t1.type != ?", consts.BUTTON).OrderAsc("t1.sort").Scan(&menuList)
+	// JOIN 角色后同一菜单会多行；Roles 单行是角色 code 字符串，需按菜单 ID 合并后再建树。
+	type routeRow struct {
+		ID         int64  `json:"id"`
+		ParentId   int64  `json:"parentId"`
+		Name       string `json:"name"`
+		Type       int    `json:"type"`
+		Path       string `json:"path"`
+		Component  string `json:"component"`
+		Visible    int    `json:"visible"`
+		Sort       int    `json:"sort"`
+		Icon       string `json:"icon"`
+		Redirect   string `json:"redirect"`
+		Roles      string `json:"roles"`
+		AlwaysShow int    `json:"alwaysShow"`
+		KeepAlive  int    `json:"keepAlive"`
+	}
+	var rows []*routeRow
+	err = d.Ctx(ctx).As("t1").LeftJoin("sys_role_menu t2", "t1.id=t2.menu_id").LeftJoin("sys_role t3", "t3.id = t2.role_id").Fields("t1.id,t1.name,t1.parent_id as parentId,t1.path,t1.component,t1.icon,t1.sort,t1.visible,t1.redirect,t1.type,t3.code as roles,t1.always_show as alwaysShow,t1.keep_alive as keepAlive").Where("t1.type != ?", consts.BUTTON).OrderAsc("t1.sort").Scan(&rows)
 	if err != nil {
 		return nil, err
+	}
+	merged := make(map[int64]*model.RouteBO, len(rows))
+	order := make([]int64, 0, len(rows))
+	for _, row := range rows {
+		if exist, ok := merged[row.ID]; ok {
+			if row.Roles != "" {
+				exist.Roles = append(exist.Roles, row.Roles)
+			}
+			continue
+		}
+		roles := make([]string, 0, 1)
+		if row.Roles != "" {
+			roles = append(roles, row.Roles)
+		}
+		merged[row.ID] = &model.RouteBO{
+			ID:         row.ID,
+			ParentId:   row.ParentId,
+			Name:       row.Name,
+			Type:       row.Type,
+			Path:       row.Path,
+			Component:  row.Component,
+			Visible:    row.Visible,
+			Sort:       row.Sort,
+			Icon:       row.Icon,
+			Redirect:   row.Redirect,
+			Roles:      roles,
+			AlwaysShow: row.AlwaysShow,
+			KeepAlive:  row.KeepAlive,
+		}
+		order = append(order, row.ID)
+	}
+	menuList = make([]*model.RouteBO, 0, len(order))
+	for _, id := range order {
+		menuList = append(menuList, merged[id])
 	}
 	return
 }
