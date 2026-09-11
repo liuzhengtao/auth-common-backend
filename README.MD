@@ -55,6 +55,7 @@ install.Install(s,
     install.WithPrefix("/api/v1"),
     install.WithDBGroup("auth"),        // 使用 database.auth 配置组
     install.WithSkipSchemaInit(true),   // 宿主自行管库时跳过建表
+    install.WithLogger(myLogger),       // 可选；不传则用 glog.New().Line(true)，不碰 g.Log()
 )
 ```
 

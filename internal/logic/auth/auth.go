@@ -10,8 +10,8 @@ import (
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
-	"github.com/gogf/gf/v2/os/glog"
 	"github.com/gogf/gf/v2/util/gconv"
+	"github.com/liuzhengtao/auth-common-backend/internal/applog"
 	"github.com/liuzhengtao/auth-common-backend/internal/config"
 	"github.com/liuzhengtao/auth-common-backend/internal/model"
 	"github.com/liuzhengtao/auth-common-backend/internal/model/entity"
@@ -22,7 +22,6 @@ import (
 type sAuth struct {
 	jwtMiddleWare *jwt.GfJWTMiddleware
 	crypto        *lib.Crypt
-	logger        *glog.Logger
 }
 
 func init() {
@@ -49,7 +48,6 @@ func New() *sAuth {
 	}
 	rAuth.jwtMiddleWare = jwtMid
 	rAuth.crypto = crypto
-	rAuth.logger = g.Log().Line(true)
 	return &rAuth
 }
 
@@ -61,7 +59,7 @@ func (s *sAuth) GetIdentity(ctx context.Context) (info *model.UserAuthInfo) {
 	identityVar := s.jwtMiddleWare.GetIdentity(ctx)
 	err := gconv.Scan(identityVar, &info)
 	if err != nil {
-		s.logger.Error(ctx, "GetIdentity转化为UserAuthInfo失败", err)
+		applog.Get().Error(ctx, "GetIdentity转化为UserAuthInfo失败", err)
 		return nil
 	}
 	return
@@ -82,7 +80,7 @@ func (s *sAuth) IdentityHandler(ctx context.Context) any {
 	claims := jwt.ExtractClaims(ctx)
 	decrypt, err := s.crypto.AesDecrpt(ctx, gconv.String(claims[s.jwtMiddleWare.IdentityKey]))
 	if err != nil {
-		s.logger.Error(ctx, "aes解密失败", err)
+		applog.Get().Error(ctx, "aes解密失败", err)
 		return nil
 	}
 	return decrypt

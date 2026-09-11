@@ -11,6 +11,7 @@ import (
 	"github.com/gogf/gf/v2/os/gctx"
 	"github.com/gogf/gf/v2/util/gconv"
 
+	"github.com/liuzhengtao/auth-common-backend/internal/applog"
 	"github.com/liuzhengtao/auth-common-backend/internal/config"
 	"github.com/liuzhengtao/auth-common-backend/internal/consts"
 	"github.com/liuzhengtao/auth-common-backend/internal/dao"
@@ -57,7 +58,7 @@ func ensureSchema(ctx context.Context) error {
 		}
 	}
 	if len(missing) > 0 {
-		g.Log().Infof(ctx, "auth-common: creating missing tables: %v", missing)
+		applog.Get().Infof(ctx, "auth-common: creating missing tables: %v", missing)
 		if err = execSchemaSQL(ctx); err != nil {
 			return err
 		}
@@ -155,11 +156,11 @@ func seedIfNeeded(ctx context.Context) error {
 		return gerror.Wrap(err, "auth-common: check admin user failed")
 	}
 	if count > 0 {
-		g.Log().Debug(ctx, "auth-common: seed skipped, admin already exists")
+		applog.Get().Debug(ctx, "auth-common: seed skipped, admin already exists")
 		return nil
 	}
 
-	g.Log().Info(ctx, "auth-common: initializing default seed data")
+	applog.Get().Info(ctx, "auth-common: initializing default seed data")
 	passwd := gconv.String(utility.EncryptData(consts.DEFAULT_PASSWORD))
 
 	return g.DB(config.Get().DbGroup).Transaction(ctx, func(ctx context.Context, tx gdb.TX) error {

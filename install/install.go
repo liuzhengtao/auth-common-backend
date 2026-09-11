@@ -3,15 +3,14 @@ package install
 import (
 	"context"
 
-	_ "github.com/liuzhengtao/auth-common-backend/internal/logic"
-
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/net/ghttp"
 	"github.com/gogf/gf/v2/os/gctx"
-
+	"github.com/liuzhengtao/auth-common-backend/internal/applog"
 	"github.com/liuzhengtao/auth-common-backend/internal/config"
 	"github.com/liuzhengtao/auth-common-backend/internal/controller"
 	"github.com/liuzhengtao/auth-common-backend/internal/dao"
+	_ "github.com/liuzhengtao/auth-common-backend/internal/logic"
 	"github.com/liuzhengtao/auth-common-backend/middleware"
 )
 
@@ -50,10 +49,7 @@ func Install(server *ghttp.Server, opts ...Option) error {
 	if server == nil {
 		return gerror.New("auth-common: server is nil")
 	}
-	o := defaultOptions()
-	for _, opt := range opts {
-		opt(o)
-	}
+	o := applyOptions(opts...)
 
 	ctx := gctx.New()
 	cfg := config.Load(ctx)
@@ -74,6 +70,17 @@ func Install(server *ghttp.Server, opts ...Option) error {
 
 	registerRoutes(server, cfg.RoutePrefix)
 	return nil
+}
+
+func applyOptions(opts ...Option) *options {
+	o := defaultOptions()
+	for _, opt := range opts {
+		opt(o)
+	}
+	if o.logger != nil {
+		applog.Set(o.logger)
+	}
+	return o
 }
 
 func registerRoutes(server *ghttp.Server, prefix string) {
@@ -115,8 +122,13 @@ func MustInstall(server *ghttp.Server, opts ...Option) {
 }
 
 // EnsureSchema 仅执行检表/建表/种子，不注册路由（便于单独初始化）。
-func EnsureSchema(ctx context.Context) error {
+func EnsureSchema(ctx context.Context, opts ...Option) error {
+	o := applyOptions(opts...)
 	cfg := config.Load(ctx)
+	if o.dbGroup != "" {
+		config.SetDBGroup(o.dbGroup)
+	}
+	cfg = config.Get()
 	dao.Init(cfg.DbGroup)
 	return ensureSchema(ctx)
 }

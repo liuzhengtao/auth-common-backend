@@ -3,22 +3,15 @@ package sysRoleMenu
 import (
 	"context"
 
-	"github.com/gogf/gf/v2/frame/g"
-	"github.com/gogf/gf/v2/os/glog"
-
 	"github.com/liuzhengtao/auth-common-backend/internal/dao"
 	"github.com/liuzhengtao/auth-common-backend/internal/model/do"
 	"github.com/liuzhengtao/auth-common-backend/internal/service"
 )
 
-type sSysRoleMenu struct {
-	logger *glog.Logger
-}
+type sSysRoleMenu struct{}
 
 func New() *sSysRoleMenu {
-	return &sSysRoleMenu{
-		logger: g.Log().Line(true),
-	}
+	return &sSysRoleMenu{}
 }
 
 func init() {

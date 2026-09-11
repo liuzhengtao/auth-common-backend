@@ -4,14 +4,13 @@ import (
 	"context"
 
 	"github.com/gogf/gf/v2/errors/gerror"
-	"github.com/gogf/gf/v2/frame/g"
-	"github.com/gogf/gf/v2/os/glog"
 	"github.com/gogf/gf/v2/text/gstr"
 	"github.com/gogf/gf/v2/util/gconv"
 	"github.com/gogf/gf/v2/util/gutil"
 
 	"github.com/liuzhengtao/auth-common-backend/api/common"
 	"github.com/liuzhengtao/auth-common-backend/api/v1/user"
+	"github.com/liuzhengtao/auth-common-backend/internal/applog"
 	"github.com/liuzhengtao/auth-common-backend/internal/consts"
 	"github.com/liuzhengtao/auth-common-backend/internal/dao"
 	"github.com/liuzhengtao/auth-common-backend/internal/model"
@@ -21,14 +20,10 @@ import (
 	"github.com/liuzhengtao/auth-common-backend/utility"
 )
 
-type sSysUserService struct {
-	logger *glog.Logger
-}
+type sSysUserService struct{}
 
 func New() *sSysUserService {
-	return &sSysUserService{
-		logger: g.Log().Line(true),
-	}
+	return &sSysUserService{}
 }
 
 func init() {
@@ -42,7 +37,7 @@ func (s *sSysUserService) ListPageUsers(ctx context.Context, queryParams *model.
 	page := &model.UserPage{Page: commonPage}
 	err = dao.SysUser.ListPageUsers(ctx, page, queryParams)
 	if err != nil {
-		s.logger.Error(ctx, "ListPageUsers查询数据失败", err)
+		applog.Get().Error(ctx, "ListPageUsers查询数据失败", err)
 		return nil, 0, gerror.New(consts.SYSTEM_EXECUTION_ERROR)
 	}
 	total = page.Total
@@ -75,7 +70,7 @@ func (s *sSysUserService) CreateUser(ctx context.Context, in *model.CreateUserIn
 	var sysUser *do.SysUser
 	err = gconv.Struct(in, &sysUser)
 	if err != nil {
-		s.logger.Error(ctx, "Struct参数转换失败")
+		applog.Get().Error(ctx, "Struct参数转换失败")
 		return 0, gerror.New(consts.PARAM_TRANSFORM_ERROR)
 	}
 	if gstr.Equal(in.Password, "") {
@@ -84,7 +79,7 @@ func (s *sSysUserService) CreateUser(ctx context.Context, in *model.CreateUserIn
 	sysUser.Password = utility.EncryptData(sysUser.Password)
 	lastInsertId, err = dao.SysUser.Ctx(ctx).Data(sysUser).InsertAndGetId()
 	if err != nil {
-		s.logger.Error(ctx, "InsertAndGetId插入数据失败", err)
+		applog.Get().Error(ctx, "InsertAndGetId插入数据失败", err)
 		return 0, gerror.New(consts.DATABASE_ERROR)
 	}
 	return
@@ -93,7 +88,7 @@ func (s *sSysUserService) CreateUser(ctx context.Context, in *model.CreateUserIn
 func (s *sSysUserService) GetUserFormData(ctx context.Context, userId int64) (form *user.Form, err error) {
 	err = dao.SysUser.Ctx(ctx).Where(dao.SysUser.Columns().Id, userId).Where(dao.SysUser.Columns().Deleted, 0).Fields("id,username,nickname,mobile,gender,avatar,email,status,dept_id as deptId").Scan(&form)
 	if err != nil {
-		s.logger.Error(ctx, "Scan查询数据失败", err)
+		applog.Get().Error(ctx, "Scan查询数据失败", err)
 		return nil, gerror.New(consts.PARAM_TRANSFORM_ERROR)
 	}
 	values, err := dao.SysUserRole.Ctx(ctx).Where(dao.SysUserRole.Columns().UserId, userId).Fields("role_id as roleIds").Array()
@@ -110,7 +105,7 @@ func (s *sSysUserService) GetUserFormData(ctx context.Context, userId int64) (fo
 func (s *sSysUserService) GetUser(ctx context.Context, userId int64) (user *entity.SysUser, err error) {
 	err = dao.SysUser.Ctx(ctx).Where(dao.SysUser.Columns().Id, userId).Scan(&user)
 	if err != nil {
-		s.logger.Error(ctx, "数据库查询失败", err)
+		applog.Get().Error(ctx, "数据库查询失败", err)
 		return nil, gerror.New(consts.DATABASE_ERROR)
 	}
 	return
@@ -120,18 +115,18 @@ func (s *sSysUserService) UpdateUser(ctx context.Context, in *model.UpdateUserIn
 	var sysUser *do.SysUser
 	err = gconv.Struct(in, &sysUser)
 	if err != nil {
-		s.logger.Error(ctx, "Struct参数转换失败")
+		applog.Get().Error(ctx, "Struct参数转换失败")
 		return gerror.New(consts.PARAM_TRANSFORM_ERROR)
 	}
 	_, err = dao.SysUser.Ctx(ctx).Data(sysUser).Where(dao.SysUser.Columns().Id, in.UserId).OmitEmpty().Update()
 	if err != nil {
-		s.logger.Error(ctx, "Update更新数据失败", err)
+		applog.Get().Error(ctx, "Update更新数据失败", err)
 		return gerror.New(consts.DATABASE_ERROR)
 	}
 	// 保存用户角色
 	err = service.SysUserRoleService().SaveUserRoles(ctx, gconv.Int(in.UserId), in.RoleIds)
 	if err != nil {
-		s.logger.Error(ctx, "SaveUserRoles更新数据失败", err)
+		applog.Get().Error(ctx, "SaveUserRoles更新数据失败", err)
 		return gerror.New(consts.DATABASE_ERROR)
 	}
 	return
@@ -141,7 +136,7 @@ func (s *sSysUserService) DeleteUsers(ctx context.Context, in *model.DeleteUserI
 	ids := gstr.SplitAndTrim(in.Ids, ",")
 	result, err := dao.SysUser.Ctx(ctx).WhereIn(dao.SysUser.Columns().Id, ids).Data(do.SysUser{Deleted: 1}).Update()
 	if err != nil {
-		s.logger.Error(ctx, "DeleteUsers更新数据失败", err)
+		applog.Get().Error(ctx, "DeleteUsers更新数据失败", err)
 		return gerror.New(consts.DATABASE_ERROR)
 	}
 	affected, err := result.RowsAffected()
@@ -159,7 +154,7 @@ func (s *sSysUserService) UpdatePasswd(ctx context.Context, in *model.UpdatePass
 	passwd := utility.EncryptData(in.Password)
 	_, err = dao.SysUser.Ctx(ctx).Where(dao.SysUser.Columns().Id, in.UserId).Data(do.SysUser{Password: passwd}).Update()
 	if err != nil {
-		s.logger.Error(ctx, "UpdatePasswd更新数据失败", err)
+		applog.Get().Error(ctx, "UpdatePasswd更新数据失败", err)
 		return gerror.New(consts.DATABASE_ERROR)
 	}
 	return
@@ -168,7 +163,7 @@ func (s *sSysUserService) UpdatePasswd(ctx context.Context, in *model.UpdatePass
 func (s *sSysUserService) UpdateStatus(ctx context.Context, in *model.UpdateStatusInput) (err error) {
 	_, err = dao.SysUser.Ctx(ctx).Where(dao.SysUser.Columns().Id, in.UserId).Data(do.SysUser{Status: in.Status}).Update()
 	if err != nil {
-		s.logger.Error(ctx, "UpdateStatus更新数据失败", err)
+		applog.Get().Error(ctx, "UpdateStatus更新数据失败", err)
 		return gerror.New(consts.DATABASE_ERROR)
 	}
 	return
@@ -197,19 +192,19 @@ func (s *sSysUserService) GetUserToToken(ctx context.Context, username, password
 	passwd := utility.EncryptData(password)
 	err = dao.SysUser.Ctx(ctx).Where(dao.SysUser.Columns().Username, username).Scan(&user)
 	if err != nil {
-		s.logger.Error(ctx, "用户名查询失败", username, err)
+		applog.Get().Error(ctx, "用户名查询失败", username, err)
 		return nil, gerror.New(consts.DATABASE_ERROR)
 	}
 	if user == nil {
-		s.logger.Error(ctx, "用户名不存在", username)
+		applog.Get().Error(ctx, "用户名不存在", username)
 		return nil, gerror.New(consts.USER_NOT_EXIST)
 	}
 	if user.Status == 0 {
-		s.logger.Error(ctx, "用户已被禁用", username)
+		applog.Get().Error(ctx, "用户已被禁用", username)
 		return nil, gerror.New(consts.USER_ACCOUNT_LOCKED)
 	}
 	if !gstr.Equal(user.Password, gconv.String(passwd)) {
-		s.logger.Error(ctx, "密码错误", username)
+		applog.Get().Error(ctx, "密码错误", username)
 		return nil, gerror.New(consts.USER_PASSWORD_ERROR)
 	}
 	return

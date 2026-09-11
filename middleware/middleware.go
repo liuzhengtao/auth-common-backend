@@ -1,10 +1,10 @@
 package middleware
 
 import (
-	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
 
 	"github.com/liuzhengtao/auth-common-backend/api/common"
+	"github.com/liuzhengtao/auth-common-backend/internal/applog"
 	"github.com/liuzhengtao/auth-common-backend/internal/service"
 )
 
@@ -22,7 +22,7 @@ func ErrorHandler(r *ghttp.Request) {
 		res = r.GetHandlerResponse()
 	)
 	if err != nil {
-		g.Log().Error(r.GetCtx(), "[SYSTEM ERROR]", err)
+		applog.Get().Error(r.GetCtx(), "[SYSTEM ERROR]", err)
 		r.Response.ClearBuffer()
 		r.Response.WriteJsonExit(
 			common.ResultFailed(err.Error()),

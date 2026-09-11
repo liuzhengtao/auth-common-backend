@@ -5,8 +5,6 @@ import (
 
 	"github.com/gogf/gf/v2/container/gset"
 	"github.com/gogf/gf/v2/errors/gerror"
-	"github.com/gogf/gf/v2/frame/g"
-	"github.com/gogf/gf/v2/os/glog"
 	"github.com/gogf/gf/v2/text/gstr"
 	"github.com/gogf/gf/v2/util/gconv"
 
@@ -18,14 +16,10 @@ import (
 	"github.com/liuzhengtao/auth-common-backend/internal/service"
 )
 
-type sSysDeptService struct {
-	logger *glog.Logger
-}
+type sSysDeptService struct{}
 
 func New() *sSysDeptService {
-	return &sSysDeptService{
-		logger: g.Log().Line(true),
-	}
+	return &sSysDeptService{}
 }
 
 func init() {

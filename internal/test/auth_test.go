@@ -3,9 +3,9 @@ package test
 import (
 	"testing"
 
+	"github.com/liuzhengtao/auth-common-backend/internal/applog"
 	"github.com/liuzhengtao/auth-common-backend/internal/model"
 	"github.com/liuzhengtao/auth-common-backend/internal/service"
-	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/os/gctx"
 )
 
@@ -20,5 +20,5 @@ func TestLoginService(t *testing.T) {
 		t.Error(err)
 		return
 	}
-	g.Log().Info(ctx, info)
+	applog.Get().Info(ctx, info)
 }

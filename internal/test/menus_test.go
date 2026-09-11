@@ -3,8 +3,7 @@ package test
 import (
 	"testing"
 
-	"github.com/gogf/gf/v2/frame/g"
-
+	"github.com/liuzhengtao/auth-common-backend/internal/applog"
 	"github.com/liuzhengtao/auth-common-backend/internal/dao"
 )
 
@@ -14,5 +13,5 @@ func TestListRolePerms(t *testing.T) {
 		t.Error(err)
 		return
 	}
-	g.Log().Info(ctx, perms)
+	applog.Get().Info(ctx, perms)
 }

@@ -7,11 +7,11 @@ import (
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
 	"github.com/gogf/gf/v2/os/gcache"
-	"github.com/gogf/gf/v2/os/glog"
 	"github.com/gogf/gf/v2/util/guid"
 	"github.com/mojocn/base64Captcha"
 
 	"github.com/liuzhengtao/auth-common-backend/api/v1/auth"
+	"github.com/liuzhengtao/auth-common-backend/internal/applog"
 	"github.com/liuzhengtao/auth-common-backend/internal/consts"
 	"github.com/liuzhengtao/auth-common-backend/internal/model"
 	"github.com/liuzhengtao/auth-common-backend/internal/service"
@@ -20,7 +20,6 @@ import (
 type sCaptchaService struct {
 	captcha *base64Captcha.Captcha
 	cache   *gcache.Cache
-	logger  glog.ILogger
 }
 
 func init() {
@@ -43,7 +42,7 @@ func NewCaptchaService() *sCaptchaService {
 	driver := newDriver()
 	captcha := base64Captcha.NewCaptcha(driver, captchaStore)
 	//cache := lib.RegisterCache(gctx.GetInitCtx(), "redis")
-	return &sCaptchaService{captcha: captcha, logger: g.Log().Line(true)}
+	return &sCaptchaService{captcha: captcha}
 }
 
 func (s *sCaptchaService) NewAndStore(ctx context.Context, captchaStoreKey string) error {
@@ -68,13 +67,13 @@ func (s *sCaptchaService) GetCaptcha(ctx context.Context) (out *model.CaptchaRes
 	_, content, answer := s.captcha.Driver.GenerateIdQuestionAnswer()
 	item, err := s.captcha.Driver.DrawCaptcha(content)
 	if err != nil {
-		s.logger.Error(ctx, "DrawCaptcha生成错误", err)
+		applog.Get().Error(ctx, "DrawCaptcha生成错误", err)
 		return nil, gerror.New(consts.SYSTEM_EXECUTION_ERROR)
 	}
 	captchaStoreKey := guid.S()
 	err = s.captcha.Store.Set(captchaStoreKey, answer)
 	if err != nil {
-		s.logger.Error(ctx, "保存captchaStore报错", err)
+		applog.Get().Error(ctx, "保存captchaStore报错", err)
 		return nil, gerror.New(consts.SYSTEM_EXECUTION_ERROR)
 	}
 	return &model.CaptchaResult{

@@ -4,8 +4,6 @@ import (
 	"context"
 
 	"github.com/gogf/gf/v2/errors/gerror"
-	"github.com/gogf/gf/v2/frame/g"
-	"github.com/gogf/gf/v2/os/glog"
 	"github.com/gogf/gf/v2/text/gstr"
 	"github.com/gogf/gf/v2/util/gconv"
 
@@ -16,14 +14,10 @@ import (
 	"github.com/liuzhengtao/auth-common-backend/internal/service"
 )
 
-type sSysDictTypeService struct {
-	logger *glog.Logger
-}
+type sSysDictTypeService struct{}
 
 func New() *sSysDictTypeService {
-	return &sSysDictTypeService{
-		logger: g.Log().Line(true),
-	}
+	return &sSysDictTypeService{}
 }
 
 func init() {

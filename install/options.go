@@ -1,5 +1,7 @@
 package install
 
+import "github.com/gogf/gf/v2/os/glog"
+
 // Option Install 可选配置。
 type Option func(*options)
 
@@ -7,6 +9,7 @@ type options struct {
 	prefix         string
 	dbGroup        string
 	skipSchemaInit bool
+	logger         glog.ILogger
 }
 
 func defaultOptions() *options {
@@ -31,5 +34,12 @@ func WithDBGroup(group string) Option {
 func WithSkipSchemaInit(skip bool) Option {
 	return func(o *options) {
 		o.skipSchemaInit = skip
+	}
+}
+
+// WithLogger 注入本库使用的 Logger；未传入时懒加载 glog.New().Line(true)，不使用 g.Log() 单例。
+func WithLogger(l glog.ILogger) Option {
+	return func(o *options) {
+		o.logger = l
 	}
 }
