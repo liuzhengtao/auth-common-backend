@@ -2,11 +2,12 @@ package captcha
 
 import (
 	"context"
+	"sync"
+	"time"
 
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
-	"github.com/gogf/gf/v2/os/gcache"
 	"github.com/gogf/gf/v2/util/guid"
 	"github.com/mojocn/base64Captcha"
 
@@ -14,17 +15,22 @@ import (
 	"github.com/liuzhengtao/auth-common-backend/internal/applog"
 	"github.com/liuzhengtao/auth-common-backend/internal/consts"
 	"github.com/liuzhengtao/auth-common-backend/internal/model"
+	"github.com/liuzhengtao/auth-common-backend/internal/redisstore"
 	"github.com/liuzhengtao/auth-common-backend/internal/service"
 )
 
 type sCaptchaService struct {
+	mu      sync.RWMutex
 	captcha *base64Captcha.Captcha
-	cache   *gcache.Cache
 }
 
+var localCaptcha *sCaptchaService
+
 func init() {
-	service.RegisterCaptchaService(NewCaptchaService())
+	localCaptcha = NewCaptchaService()
+	service.RegisterCaptchaService(localCaptcha)
 }
+
 func newDriver() *base64Captcha.DriverString {
 	driver := &base64Captcha.DriverString{
 		Height:          44,
@@ -37,22 +43,39 @@ func newDriver() *base64Captcha.DriverString {
 	}
 	return driver.ConvertFonts()
 }
+
 func NewCaptchaService() *sCaptchaService {
-	captchaStore := base64Captcha.DefaultMemStore
+	store := base64Captcha.DefaultMemStore
 	driver := newDriver()
-	captcha := base64Captcha.NewCaptcha(driver, captchaStore)
-	//cache := lib.RegisterCache(gctx.GetInitCtx(), "redis")
-	return &sCaptchaService{captcha: captcha}
+	return &sCaptchaService{captcha: base64Captcha.NewCaptcha(driver, store)}
+}
+
+// UseRedisStore 切换为 Redis 验证码存储（分布式模式由 Install 调用）。
+func UseRedisStore(group string) {
+	if localCaptcha == nil {
+		return
+	}
+	store := redisstore.NewCaptchaStore(group, 5*time.Minute)
+	localCaptcha.mu.Lock()
+	defer localCaptcha.mu.Unlock()
+	localCaptcha.captcha = base64Captcha.NewCaptcha(newDriver(), store)
+}
+
+func (s *sCaptchaService) getCaptcha() *base64Captcha.Captcha {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.captcha
 }
 
 func (s *sCaptchaService) NewAndStore(ctx context.Context, captchaStoreKey string) error {
 	request := g.RequestFromCtx(ctx)
-	_, content, answer := s.captcha.Driver.GenerateIdQuestionAnswer()
-	item, err := s.captcha.Driver.DrawCaptcha(content)
+	c := s.getCaptcha()
+	_, content, answer := c.Driver.GenerateIdQuestionAnswer()
+	item, err := c.Driver.DrawCaptcha(content)
 	if err != nil {
 		return err
 	}
-	err = s.captcha.Store.Set(captchaStoreKey, answer)
+	err = c.Store.Set(captchaStoreKey, answer)
 	if err != nil {
 		return err
 	}
@@ -64,14 +87,15 @@ func (s *sCaptchaService) NewAndStore(ctx context.Context, captchaStoreKey strin
 }
 
 func (s *sCaptchaService) GetCaptcha(ctx context.Context) (out *model.CaptchaResult, err error) {
-	_, content, answer := s.captcha.Driver.GenerateIdQuestionAnswer()
-	item, err := s.captcha.Driver.DrawCaptcha(content)
+	c := s.getCaptcha()
+	_, content, answer := c.Driver.GenerateIdQuestionAnswer()
+	item, err := c.Driver.DrawCaptcha(content)
 	if err != nil {
 		applog.Get().Error(ctx, "DrawCaptcha生成错误", err)
 		return nil, gerror.New(consts.SYSTEM_EXECUTION_ERROR)
 	}
 	captchaStoreKey := guid.S()
-	err = s.captcha.Store.Set(captchaStoreKey, answer)
+	err = c.Store.Set(captchaStoreKey, answer)
 	if err != nil {
 		applog.Get().Error(ctx, "保存captchaStore报错", err)
 		return nil, gerror.New(consts.SYSTEM_EXECUTION_ERROR)
@@ -80,10 +104,11 @@ func (s *sCaptchaService) GetCaptcha(ctx context.Context) (out *model.CaptchaRes
 		CaptchaRes: &auth.CaptchaRes{CaptchaId: captchaStoreKey, CaptchaBase64: item.EncodeB64string()},
 	}, nil
 }
+
 func (s *sCaptchaService) Store(ctx context.Context, captchaStoreKey, captchaStoreVal string) error {
-	return s.captcha.Store.Set(captchaStoreKey, captchaStoreVal)
+	return s.getCaptcha().Store.Set(captchaStoreKey, captchaStoreVal)
 }
 
 func (s *sCaptchaService) VerifyAndClear(r *ghttp.Request, captchaStoreKey string, value string) bool {
-	return s.captcha.Verify(captchaStoreKey, value, true)
+	return s.getCaptcha().Verify(captchaStoreKey, value, true)
 }

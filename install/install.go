@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/gogf/gf/v2/errors/gerror"
+	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
 	"github.com/gogf/gf/v2/os/gctx"
 	"github.com/liuzhengtao/auth-common-backend/internal/applog"
@@ -11,6 +12,7 @@ import (
 	"github.com/liuzhengtao/auth-common-backend/internal/controller"
 	"github.com/liuzhengtao/auth-common-backend/internal/dao"
 	_ "github.com/liuzhengtao/auth-common-backend/internal/logic"
+	"github.com/liuzhengtao/auth-common-backend/internal/logic/captcha"
 	"github.com/liuzhengtao/auth-common-backend/middleware"
 )
 
@@ -59,8 +61,21 @@ func Install(server *ghttp.Server, opts ...Option) error {
 	if o.dbGroup != "" {
 		config.SetDBGroup(o.dbGroup)
 	}
+	if o.redisGroup != "" {
+		config.SetRedisGroup(o.redisGroup)
+	}
+	if o.distributed != nil {
+		config.SetDistributed(*o.distributed)
+	}
 	cfg = config.Get()
 	dao.Init(cfg.DbGroup)
+
+	if cfg.Distributed {
+		if err := ensureRedis(ctx, cfg.RedisGroup); err != nil {
+			return err
+		}
+		captcha.UseRedisStore(cfg.RedisGroup)
+	}
 
 	if !o.skipSchemaInit {
 		if err := ensureSchema(ctx); err != nil {
@@ -69,6 +84,17 @@ func Install(server *ghttp.Server, opts ...Option) error {
 	}
 
 	registerRoutes(server, cfg.RoutePrefix)
+	return nil
+}
+
+// ensureRedis 校验宿主 Redis 配置组可用（需宿主 blank-import redis 驱动）。
+func ensureRedis(ctx context.Context, group string) error {
+	if group == "" {
+		group = "default"
+	}
+	if _, err := g.Redis(group).Do(ctx, "PING"); err != nil {
+		return gerror.Wrapf(err, "auth-common: redis group %q unavailable (blank-import github.com/gogf/gf/contrib/nosql/redis/v2 and configure redis.%s)", group, group)
+	}
 	return nil
 }
 

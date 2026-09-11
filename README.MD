@@ -38,15 +38,14 @@ func main() {
 }
 ```
 
-兼容旧写法：`install.NewInstall().Install(s)`。
-
 ### Install 行为
 
 1. 连接宿主库 `g.DB(dbGroup)`（默认 group 为 `default`）
 2. 检查 8 张表：`sys_user` / `sys_role` / `sys_menu` / `sys_dept` / `sys_dict` / `sys_dict_type` / `sys_user_role` / `sys_role_menu`
 3. 缺失则自动 `CREATE TABLE`
 4. 若无 `admin` 用户，写入默认部门、角色、用户、菜单、字典
-5. 挂载路由（默认前缀 `/api/v1`）
+5. 若开启分布式：校验 Redis 并切换验证码到 Redis Store
+6. 挂载路由（默认前缀 `/api/v1`）
 
 可选参数：
 
@@ -56,6 +55,8 @@ install.Install(s,
     install.WithDBGroup("auth"),        // 使用 database.auth 配置组
     install.WithSkipSchemaInit(true),   // 宿主自行管库时跳过建表
     install.WithLogger(myLogger),       // 可选；不传则用 glog.New().Line(true)，不碰 g.Log()
+    install.WithDistributed(true),      // 分布式：Redis 验证码 + Token 黑名单
+    install.WithRedisGroup("default"),  // 可选；默认 default，对应 redis.default
 )
 ```
 
@@ -72,15 +73,44 @@ database:
   auth:
     link: "mysql:user:pass@tcp(127.0.0.1:3306)/auth"
 
+redis:
+  default:
+    address: "127.0.0.1:6379"
+    db: 1
+
 authCommon:
-  jwtSecret: "change-me"
-  jwtAesKey: "change-me"
+  jwtSecret: "change-me"      # JWT HMAC 密钥（多节点需一致）
+  jwtAesKey: "change-me"      # Identity 载荷 AES 密钥（多节点需一致）
   encryptSalt: "change-me"
   routePrefix: "/api/v1"
-  dbGroup: "auth"   # 可选，默认 default；也可由 install.WithDBGroup 覆盖
+  dbGroup: "auth"             # 可选，默认 default；也可由 install.WithDBGroup 覆盖
+  distributed: false          # true 时启用 Redis 验证码共享 + Token 黑名单
+  redisGroup: "default"       # 可选，默认 default；也可由 install.WithRedisGroup 覆盖
 ```
 
 未配置时使用模块内默认值。种子用户密码按当前 `encryptSalt` **运行时计算**。
+
+JwtSecret / JwtAesKey **仅通过** `authCommon` 配置（或默认值），不提供 Install Option 传入。
+
+## 分布式模式（Redis）
+
+默认 `distributed: false`：验证码用进程内存，登出不做服务端黑名单（与原先行为一致）。
+
+开启后（`authCommon.distributed: true` 或 `install.WithDistributed(true)`）：
+
+1. **验证码**：写入宿主 Redis，多节点可共享校验
+2. **Token 黑名单**：登出时将 token 写入 Redis（TTL=剩余有效期）；`middleware.Auth` 在 JWT 校验前拦截已吊销 token
+
+Redis 连接与 `dbGroup` 同模式：默认用宿主 `redis.default`（`g.Redis()`）；也可指定 `redisGroup` 指向其它组。
+
+宿主还需 blank-import Redis 驱动（与 MySQL 驱动同级）：
+
+```go
+import (
+    _ "github.com/gogf/gf/contrib/drivers/mysql/v2"
+    _ "github.com/gogf/gf/contrib/nosql/redis/v2"
+)
+```
 
 ## 默认账号
 
@@ -95,7 +125,7 @@ authCommon:
 |------|------|
 | `GET /auth/captcha` | 验证码 |
 | `POST /auth/login` | 登录 |
-| `DELETE /auth/logout` | 登出（需鉴权） |
+| `DELETE /auth/logout` | 登出（需鉴权；分布式下写入黑名单） |
 | `/users` `/roles` `/menus` `/dept` `/dict` | 系统管理（需鉴权） |
 
 鉴权：`Authorization: Bearer <token>`（也支持 query `token` / cookie `jwt`）。

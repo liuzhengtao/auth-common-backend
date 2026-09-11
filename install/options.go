@@ -10,6 +10,8 @@ type options struct {
 	dbGroup        string
 	skipSchemaInit bool
 	logger         glog.ILogger
+	distributed    *bool
+	redisGroup     string
 }
 
 func defaultOptions() *options {
@@ -41,5 +43,19 @@ func WithSkipSchemaInit(skip bool) Option {
 func WithLogger(l glog.ILogger) Option {
 	return func(o *options) {
 		o.logger = l
+	}
+}
+
+// WithDistributed 开启分布式模式（Redis 共享验证码 + Token 黑名单）；也可通过 config authCommon.distributed 配置。
+func WithDistributed(enabled bool) Option {
+	return func(o *options) {
+		o.distributed = &enabled
+	}
+}
+
+// WithRedisGroup 覆盖 Redis 配置组名，默认 default（也可通过 config authCommon.redisGroup 配置）。
+func WithRedisGroup(group string) Option {
+	return func(o *options) {
+		o.redisGroup = group
 	}
 }

@@ -11,11 +11,13 @@ import (
 
 // Config auth-common 插件配置，可通过宿主 config.yaml 的 authCommon 节点覆盖。
 type Config struct {
-	JwtSecret   string `json:"jwtSecret"`
-	JwtAesKey   string `json:"jwtAesKey"`
-	EncryptSalt string `json:"encryptSalt"`
-	RoutePrefix string `json:"routePrefix"`
-	DbGroup     string `json:"dbGroup"`
+	JwtSecret    string `json:"jwtSecret"`
+	JwtAesKey    string `json:"jwtAesKey"`
+	EncryptSalt  string `json:"encryptSalt"`
+	RoutePrefix  string `json:"routePrefix"`
+	DbGroup      string `json:"dbGroup"`
+	Distributed  bool   `json:"distributed"`
+	RedisGroup   string `json:"redisGroup"`
 }
 
 var (
@@ -31,6 +33,8 @@ func defaultConfig() Config {
 		EncryptSalt: consts.EncryptSaltKey,
 		RoutePrefix: "/api/v1",
 		DbGroup:     "default",
+		Distributed: false,
+		RedisGroup:  "default",
 	}
 }
 
@@ -62,6 +66,9 @@ func Load(ctx context.Context) Config {
 		}
 		if cfg.DbGroup == "" {
 			cfg.DbGroup = "default"
+		}
+		if cfg.RedisGroup == "" {
+			cfg.RedisGroup = "default"
 		}
 	}
 	loaded = true
@@ -106,4 +113,29 @@ func SetDBGroup(group string) {
 		loaded = true
 	}
 	cfg.DbGroup = group
+}
+
+// SetDistributed 由 Install Option 覆盖是否启用分布式（Redis 验证码 + Token 黑名单）。
+func SetDistributed(enabled bool) {
+	mu.Lock()
+	defer mu.Unlock()
+	if !loaded {
+		cfg = defaultConfig()
+		loaded = true
+	}
+	cfg.Distributed = enabled
+}
+
+// SetRedisGroup 由 Install Option 覆盖 Redis 配置组名。
+func SetRedisGroup(group string) {
+	if group == "" {
+		return
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	if !loaded {
+		cfg = defaultConfig()
+		loaded = true
+	}
+	cfg.RedisGroup = group
 }

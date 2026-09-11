@@ -5,10 +5,11 @@ go 1.20
 require (
 	github.com/dobyte/gf-casbin v0.1.1
 	github.com/gogf/gf-jwt/v2 v2.1.0
+	github.com/gogf/gf/contrib/drivers/mysql/v2 v2.7.1
 	github.com/gogf/gf/v2 v2.7.1
+	github.com/golang-jwt/jwt/v4 v4.3.0
 	github.com/liuzhengtao/commonlib v0.0.1
 	github.com/mojocn/base64Captcha v1.3.6
-
 )
 
 require (
@@ -21,8 +22,6 @@ require (
 	github.com/go-logr/logr v1.2.4 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-sql-driver/mysql v1.7.1 // indirect
-	github.com/gogf/gf/contrib/drivers/mysql/v2 v2.7.1 // indirect
-	github.com/golang-jwt/jwt/v4 v4.3.0 // indirect
 	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0 // indirect
 	github.com/gorilla/websocket v1.5.1 // indirect
 	github.com/grokify/html-strip-tags-go v0.1.0 // indirect
@@ -31,7 +30,6 @@ require (
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-runewidth v0.0.15 // indirect
 	github.com/olekukonko/tablewriter v0.0.5 // indirect
-	github.com/rabbitmq/amqp091-go v1.10.0 // indirect
 	github.com/rivo/uniseg v0.4.4 // indirect
 	github.com/tjfoc/gmsm v1.4.1 // indirect
 	github.com/vmihailenco/msgpack/v5 v5.4.1 // indirect
